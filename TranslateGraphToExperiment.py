@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[ ]:
-
-
 import numpy as np
 import sympy as sp 
 import pandas as pd 
@@ -16,10 +10,6 @@ from sympy import sqrt,pi,I
 import ast
 from collections import Counter
 from functools import reduce
-
-
-# In[ ]:
-
 
 def get_num_label(labels):
     num_to_label = dict((num, label) for num, label in enumerate(labels))
@@ -38,10 +28,6 @@ def SetupToStr(setup):
     for element in range(len(setup)-1,-1,-1):
         yyy = yyy.replace('XXX', setup[element])
     return yyy
-
-
-# In[ ]:
-
 
 #define optical devices (bs , pbs , hwp , spdc , phase shifter , oamhologram, reflection, absorber) 
 Paths = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k']
@@ -130,10 +116,6 @@ def Phase_Shifter(psi, p, phi):
     psi = psi.replace(p[l], sp.exp(I*l*phi)*p[l])
     return(psi)
 
-
-# In[ ]:
-
-
 #define post selection
 def post_select (psi, dimm, ns = []):
     expr = list(psi.expr_free_symbols) 
@@ -158,10 +140,6 @@ def post_select (psi, dimm, ns = []):
     selection = [select[i][0]*select[i][1] for i in range(len(select))]
     final_state = sp.expand(sum(selection ))
     return(final_state)
-
-
-# In[ ]:
-
 
 # Graph to Entanglement by path identity
 Graph = {(0, 1 , 0, 0 ): 1,
@@ -190,10 +168,6 @@ def Graph_to_EbPI(Graph):
 
 GraphtoEbPI = Graph_to_EbPI(Graph)
 print(GraphtoEbPI )
-
-
-# In[ ]:
-
 
 #Graph to path-encoding (for on-chip) 
 def Graph_to_PathEn(graph):
@@ -229,9 +203,6 @@ GraphtoPathEn = Graph_to_PathEn(Graph)
 print(GraphtoPathEn)
 
 
-# In[ ]:
-
-
 #Graph to polarisation-encoding (for bulk optics)
 def Graph_to_PolEN(expr):
     dictt ={}
@@ -258,10 +229,3 @@ def Graph_to_PolEN(expr):
     return dictt   
 GraphtoPolEN = Graph_to_PolEN(GraphtoPathEn)
 print(GraphtoPolEN)
-
-
-# In[ ]:
-
-
-
-
