@@ -178,13 +178,14 @@ def Graph_to_EbPI(Graph):
     GraphEdgesAlphabet = [encoded_label(path,get_num_label(Paths))for path in GraphEdges]
     Dimension  = [grouper(2,i)[1] for i in list(Graph.keys())]
     dd = len(np.unique(list(itertools.chain(*Dimension ))))
+    Numphoton =  len(np.unique(list(itertools.chain(*GraphEdgesAlphabet ))))
     SetupList = []
     for pp in range(len(Graph)):
         SetupList.append("SPDC(XXX,"+GraphEdgesAlphabet[pp][0]+","+GraphEdgesAlphabet[pp][1]                     +","+str(Dimension[pp][0])+","+str(Dimension[pp][1])+")")
     setup = SetupToStr(SetupList)
     dictt['Experiment'] = SetupList
     dictt['SetupLength'] = len(SetupList)
-    dictt['OutputState'] = post_select(sp.expand((eval(setup.replace('XXX', str(0))))**dd), dim)
+    dictt['OutputState'] = post_select(sp.expand((eval(setup.replace('XXX', str(0))))**int(Numphoton/2)), dim)
     return dictt
 
 GraphtoEbPI = Graph_to_EbPI(Graph)
