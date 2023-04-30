@@ -47,7 +47,7 @@ f0 ,f1, f2 , f3, f4 , f5 = sp.symbols('f:6', cls =sp.IndexedBase )
 # n = 1 , dim=2 -> HWP: Cyclic_Transformation in 2 dimention 
 dim =  [l1 , l2 ,l3 , l4, l5 , l6 , l7 , l8 , l9 , l10]
 def HWP(psi,p,n=1,dim=2): 
-    psi=psi.replace(p[l],lambda l: p[np.mod((l+n),d)])
+    psi=psi.replace(p[l],lambda l: p[np.mod((l+n),dim)])
     return psi
 
 def Absorber(psi, p):
