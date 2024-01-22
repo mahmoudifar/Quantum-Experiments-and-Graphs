@@ -12,7 +12,7 @@ def get_num_label(labels):
     num_to_label = dict((num, label) for num, label in enumerate(labels))
     return num_to_label
 
-def encoded_label(nums,labels ):# for transform num to alphabet
+def encoded_label(nums,labels):# for transform num to alphabet
     encoded_labels =[labels[num] for num in nums]
     return encoded_labels
 
@@ -31,7 +31,7 @@ Paths = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k']
 colors = ['dodgerblue', 'firebrick', 'limegreen', 'darkorange', 'purple', 'yellow', 'cyan']
 a, b, c, d, e, f, g, h, i, j, k = map(sp.IndexedBase, Paths)
 zero = sp.Symbol('zero') 
-theta, alpha, phi, beta, gamma, eta, ommega = sp.symbols(' theta alpha phi beta  gamma eta ommega', integer=True )
+theta, alpha, phi, beta, gamma, eta, ommega = sp.symbols('theta alpha phi beta  gamma eta ommega', integer=True )
 p, p1, p2 = map(sp.IndexedBase,['p', 'p1', 'p2'])
 l, l1, l2, l3, l4, l5, l6, l7, l8,l9 , l10, P, r , t, coeff  = map(sp.Wild, ['l','l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8','l9','l10', 'P', 'r', 't', 'coeff '])
 a0 ,a1, a2 , a3, a4 , a5 = sp.symbols('a:6', cls =sp.IndexedBase )
@@ -41,11 +41,11 @@ d0 ,d1, d2 , d3, d4 , d5 = sp.symbols('d:6', cls =sp.IndexedBase )
 e0 ,e1, e2 , e3, e4 , e5 = sp.symbols('e:6', cls =sp.IndexedBase )
 f0 ,f1, f2 , f3, f4 , f5 = sp.symbols('f:6', cls =sp.IndexedBase )
 # H -> 0 V -> 1
-# n = 1 , dim=2 -> HWP: Cyclic_Transformation in 2 dimention 
+# n = 1 , dim=2 -> HWP: Cyclic_Transformation in 2 dimensions 
 dim =  [l1 , l2 ,l3 , l4, l5 , l6 , l7 , l8 , l9 , l10]
 
-def HWP(psi, p, n=1, dim=2): 
-    psi=psi.replace(p[l],lambda l: p[np.mod((l+n),dim)])
+def HWP(psi, p, n = 1, dim = 2): 
+    psi = psi.replace(p[l], lambda l: p[np.mod((l+n),dim)])
     return psi
 
 def Absorber(psi, p):
@@ -87,9 +87,9 @@ def SPDC(psi, p1, p2, l1, l2):
 
 def PBS_Fun(psi, p1, p2):
     if psi.base == p1:
-        psi = psi.replace(p1[l],lambda l: p1[l] if l==1 else p2[l])
+        psi = psi.replace(p1[l], lambda l: p1[l] if l==1 else p2[l])
     elif psi.base == p2:
-        psi = psi.replace(p2[l],lambda l: p2[l] if l==1 else p1[l])
+        psi = psi.replace(p2[l], lambda l: p2[l] if l==1 else p1[l])
     return psi
         
 def PBS(psi, p1, p2):
@@ -154,11 +154,11 @@ def Graph_to_EbPI(Graph):
     GraphEdges = [grouper(2,i)[0] for i in list(Graph.keys())]
     GraphEdgesAlphabet = [encoded_label(path, get_num_label(Paths))for path in GraphEdges]
     Dimension  = [grouper(2,i)[1] for i in list(Graph.keys())]
-    dd = len(np.unique(list(itertools.chain(*Dimension ))))
-    Numphoton =  len(np.unique(list(itertools.chain(*GraphEdgesAlphabet ))))
+    dd = len(np.unique(list(itertools.chain(*Dimension))))
+    Numphoton =  len(np.unique(list(itertools.chain(*GraphEdgesAlphabet))))
     SetupList = []
     for pp in range(len(Graph)):
-        SetupList.append("SPDC(XXX,"+GraphEdgesAlphabet[pp][0] +","+GraphEdgesAlphabet[pp][1] +","+str(Dimension[pp][0])+","+str(Dimension[pp][1])+")")
+        SetupList.append("SPDC(XXX,"+GraphEdgesAlphabet[pp][0] +","+GraphEdgesAlphabet[pp][1]+","+str(Dimension[pp][0])+","+str(Dimension[pp][1])+")")
     setup = SetupToStr(SetupList)
     dictt['Experiment'] = SetupList
     dictt['SetupLength'] = len(SetupList)
@@ -175,40 +175,40 @@ def Graph_to_PathEn(graph):
     SetupList = []
     for pp in range(len(Graph)):
         SetupList.append("SPDC(XXX,"+GraphEdgesAlphabet[pp][0]+str(pp)+","+GraphEdgesAlphabet[pp][1] + str(pp) +","+str(Dimension[pp][0])+","+str(Dimension[pp][1])+")")
-    AllPath= []
+    AllPath = []
     AllDim = []
     for pp in range(len(Graph)):
         AllPath.append(str(GraphEdgesAlphabet[pp][0])+str(pp))
         AllPath.append(str(GraphEdgesAlphabet[pp][1])+str(pp))
         AllDim.append(str(Dimension[pp][0]))
         AllDim.append(str(Dimension[pp][1]))
-    PossiblePath =(list(itertools.combinations(AllPath,2)))
+    PossiblePath = (list(itertools.combinations(AllPath,2)))
     PossibleDim = (list(itertools.combinations(AllDim ,2)))    
     combine= list(zip(PossiblePath,PossibleDim))
-    combination = [combine[i][0]+combine[i][1] for i in range(len(combine))]
+    combination = [combine[i][0] + combine[i][1] for i in range(len(combine))]
     for pd in range(len(combination)):
-        if combination[pd][0][0]== combination[pd][1][0] and combination[pd][2]==combination[pd][3]:
-            SetupList.append("BS(XXX,"+combination[pd][0]+","+combination[pd][1]+")")
+        if combination[pd][0][0] == combination[pd][1][0] and combination[pd][2] == combination[pd][3]:
+            SetupList.append("BS(XXX," +combination[pd][0]+", "+combination[pd][1]+")")
             SetupList.append("Absorber(XXX,"+combination[pd][1]+")") 
     setup = SetupToStr(SetupList)
     dictt['Experiment'] = SetupList
     dictt['SetupLength'] = len(SetupList)
-    dictt['OutputState']= sp.expand(eval(setup.replace('XXX', str(0))))
+    dictt['OutputState'] = sp.expand(eval(setup.replace('XXX', str(0))))
     return dictt
     
 #Graph to polarisation-encoding (for bulk optics)
 def Graph_to_PolEN(expr):
-    dictt ={}
+    dictt = {}
     SetupList = expr['Experiment']
     psi = expr['OutputState']
-    ss = list(psi.expr_free_symbols)
+    ss = list(psi.free_symbols)
     path = []
     dimension = []
     for ii in ss:
-        if type(ii)==sp.tensor.indexed.Indexed:
+        if type(ii) == sp.tensor.indexed.Indexed:
             path.append(str(ii.base))
             dimension.append(str(ii.indices[0]))
-    PossiblePath =(list(itertools.combinations(path,2)))
+    PossiblePath = (list(itertools.combinations(path,2)))
     PossibleDim = (list(itertools.combinations(dimension ,2)))  
     combine= list(zip(PossiblePath,PossibleDim))
     combination = [combine[i][0]+combine[i][1] for i in range(len(combine))]
@@ -218,5 +218,5 @@ def Graph_to_PolEN(expr):
     setup = SetupToStr(SetupList)
     dictt['Experiment'] = SetupList
     dictt['SetupLength'] = len(SetupList)
-    dictt['OutputState']= sp.expand(eval(setup.replace('XXX', str(0))))
+    dictt['OutputState'] = sp.expand(eval(setup.replace('XXX', str(0))))
     return dictt   
