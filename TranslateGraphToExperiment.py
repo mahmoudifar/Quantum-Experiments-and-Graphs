@@ -1,222 +1,276 @@
-import numpy as np
 import sympy as sp 
-import itertools
-from numpy.random import choice
-import random 
-from sympy import sqrt, pi, I
-import ast
-from collections import Counter
+import numpy as np
 from functools import reduce
+import itertools
 
-def get_num_label(labels):
+I = sp.I
+sqrt = sp.sqrt
+zero = sp.Symbol('zero') 
+num_mode = 7
+
+Paths = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'p']
+
+ALLPaths = [f'{prefix}{i}' for i in range(0, num_mode + 1) for prefix in Paths] + Paths
+          
+
+for op in ALLPaths: # op: optical path
+    globals()[op] = sp.IndexedBase(op)
+
+n, m, l, l1, l2, l3, l4, l5, l6, l7, l8, l9, l10 = map(sp.Wild, ['n', 'm', 'l', 'l1',
+                                 'l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8', 'l9', 'l10']
+                                                        )
+
+theta, alpha, phi = sp.symbols('theta alpha phi', integer=True)
+
+Labels =  [l1, l2, l3, l4, l5, l6, l7, l8, l9, l10]
+
+def SetupToStr(setup):
+    # A string created by replacing 'psi' with elements from the setup list in reverse order.
+    setupstr = 'psi'
+    for element in reversed(setup):
+        setupstr = setupstr.replace('psi', element)
+    return setupstr
+
+def EncodedLabel(nums, labels):
+    # Map each index in nums to its corresponding label in labels
+    encoded_labels = [labels[i] for i in nums]
+    return encoded_labels
+
+def GetNumLabel(labels):
     num_to_label = dict((num, label) for num, label in enumerate(labels))
     return num_to_label
 
-def encoded_label(nums,labels):# for transform num to alphabet
-    encoded_labels =[labels[num] for num in nums]
-    return encoded_labels
-
-def grouper(n, iterable):
+def Grouper(n, iterable):
     args = [iter(iterable)] * n
     return list(zip(*args))
 
-def SetupToStr(setup):
-    yyy ='XXX'
-    for element in range(len(setup)-1,-1,-1):
-        yyy = yyy.replace('XXX', setup[element])
-    return yyy
+def Sort(psi, labels=Labels):
+   
+    # Extract free symbols from the expression
+    symbols = list(psi.free_symbols)
+    
+    # Identify indexed symbols and collect their bases
+    bases = [sym.base for sym in symbols if isinstance(sym, sp.tensor.indexed.Indexed)]
+    
+    # Remove duplicates to identify unique bases
+    unique_bases = list(set(bases))
+    
+    # Map numeric indices to labels
+    mapped_labels = EncodedLabel(range(len(unique_bases)), labels)
+    
+    # Create a mapping between the unique bases and their corresponding labels
+    mapping = list(zip(unique_bases, mapped_labels))
+    
+    # Construct the sorted expression 
+    sorted_expression = [mapping[i][0][mapping[i][1]] for i in range(len(mapping))]
+    
+    sorted_result = reduce(lambda x, y: x * y, sorted_expression)
+    
+    return sorted_result
 
-#define optical devices (bs, pbs, hwp, spdc, phase shifter, oamhologram, reflection, absorber) 
-Paths = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k']
-colors = ['dodgerblue', 'firebrick', 'limegreen', 'darkorange', 'purple', 'yellow', 'cyan']
-a, b, c, d, e, f, g, h, i, j, k = map(sp.IndexedBase, Paths)
-zero = sp.Symbol('zero') 
-theta, alpha, phi, beta, gamma, eta, ommega = sp.symbols('theta alpha phi beta  gamma eta ommega', integer=True )
-p, p1, p2 = map(sp.IndexedBase,['p', 'p1', 'p2'])
-l, l1, l2, l3, l4, l5, l6, l7, l8,l9 , l10, P, r , t, coeff  = map(sp.Wild, ['l','l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8','l9','l10', 'P', 'r', 't', 'coeff '])
-a0 ,a1, a2 , a3, a4 , a5 = sp.symbols('a:6', cls =sp.IndexedBase )
-b0 ,b1, b2 , b3, b4 , b5 = sp.symbols('b:6', cls =sp.IndexedBase )
-c0 ,c1, c2 , c3, c4 , c5 = sp.symbols('c:6', cls =sp.IndexedBase )
-d0 ,d1, d2 , d3, d4 , d5 = sp.symbols('d:6', cls =sp.IndexedBase )
-e0 ,e1, e2 , e3, e4 , e5 = sp.symbols('e:6', cls =sp.IndexedBase )
-f0 ,f1, f2 , f3, f4 , f5 = sp.symbols('f:6', cls =sp.IndexedBase )
-# H -> 0 V -> 1
-# n = 1 , dim=2 -> HWP: Cyclic_Transformation in 2 dimensions 
-dim =  [l1 , l2 ,l3 , l4, l5 , l6 , l7 , l8 , l9 , l10]
+def PostSelaction(psi, selected_term):
 
-def HWP(psi, p, n = 1, dim = 2): 
-    psi = psi.replace(p[l], lambda l: p[np.mod((l+n),dim)])
+    collected_terms = sp.collect(psi, [selected_term], evaluate=False)
+
+    # Extract terms and coefficients from the dictionary
+    terms, coefficients = zip(*collected_terms.items())
+
+    # Replace coefficients corresponding to terms equal to 1
+    coefficients = [0 if term == 1 else coeff for term, coeff in zip(terms, coefficients)]
+
+    # Reconstruct the state after post-selection
+    selection_list = [term * coeff for term, coeff in zip(terms, coefficients)]
+    psi_out = sp.expand(sum(selection_list))
+
+    return psi_out
+
+# Define optical devices 
+
+def HalfWavePlate(psi, p, n=1, dim=2):
+    psi = psi.replace(p[l], lambda l: p[(l + n) % dim])
     return psi
 
 def Absorber(psi, p):
     psi = psi.replace(p[l], 0)
     return psi
 
-def OAMHolo(psi, p, n):
-    psi = psi.replace(p[l], p[l+n])
+def PhaseShifter(psi, p, phi):
+    psi = psi.replace(p[l], lambda l: sp.exp(I * l * phi) * p[l])
     return psi 
+
+def OAMHologram(psi, p, n):
+    psi = psi.replace(p[l], lambda l: p[l + n])
+    return psi
 
 def BS_Fun(psi, p1, p2):
     if psi.base == p1:
-        psi = psi.replace(p1[l], 1/sqrt(2)*(p2[l]+I*p1[l]))
+        psi = psi.replace(p1[l], 1 / sqrt(2) * (p2[l] + I * p1[l]))
     elif psi.base == p2:
-        psi = psi.replace(p2[l], 1/sqrt(2)*(p1[l]+I*p2[l]))
+        psi = psi.replace(p2[l], 1 / sqrt(2) * (p1[l] + I * p2[l]))
     return psi
 
-def BS(psi, p1, p2):
-    expr0 = list(psi.free_symbols) 
-    phi = []
-    psi1 = []
-    for ii in expr0:
-        if type(ii) == sp.tensor.indexed.Indexed:
-             phi.append(ii)
-    for phi0 in phi:
-        if phi0.base == p1 or phi0.base == p2:
-            psi1.append(phi0)
-    if len(psi1) == 0:
-        psi = psi      
-    elif len(psi1) == 1:
-        psi = sp.expand(psi.xreplace({psi1[0]: BS_Fun(psi1[0], p1, p2)}))
-    elif len(psi1) == 2:    
-        psi = sp.expand(psi.xreplace({psi1[0]: BS_Fun(psi1[0], p1, p2), psi1[1]: BS_Fun(psi1[1], p1, p2)}))
+def BeamSplitter(psi, p1, p2):
+    # Extract all indexed symbols in the expression
+    indexed_symbols = [sym for sym in psi.free_symbols if isinstance(sym, sp.Indexed)]
+
+    # Filter symbols belonging to p1 or p2
+    relevant_symbols = [
+        sym for sym in indexed_symbols if sym.base == p1 or sym.base == p2
+    ]
+
+    replacements = {
+        sym: BS_Fun(sym, p1, p2) for sym in relevant_symbols
+    }
+    psi = sp.expand(psi.xreplace(replacements))
+
     return psi
 
+def PolarisingBeamSplitter(psi, p1, p2):
+    psi = psi.subs(
+        {
+            p1[0]: p2[0],
+            p1[1]: p1[1],
+            p2[0]: p1[0],
+            p2[1]: p2[1]
+        },
+        simultaneous=True
+    )
+    return psi
+
+# Spontaneous Parametric Down-Conversion
 def SPDC(psi, p1, p2, l1, l2):
-    psi = psi + p1[l1]*p2[l2]
+    psi = psi + p1[l1] * p2[l2]
     return psi
 
-def PBS_Fun(psi, p1, p2):
-    if psi.base == p1:
-        psi = psi.replace(p1[l], lambda l: p1[l] if l==1 else p2[l])
-    elif psi.base == p2:
-        psi = psi.replace(p2[l], lambda l: p2[l] if l==1 else p1[l])
-    return psi
-        
-def PBS(psi, p1, p2):
-    expr0 = list(psi.free_symbols) 
-    phi = []
-    psi1 = []
-    for ii in expr0:
-        if type(ii) == sp.tensor.indexed.Indexed:
-             phi.append(ii)
-    for phi0 in phi:
-        if phi0.base == p1 or phi0.base == p2:
-            psi1.append(phi0)
-    if len(psi1) == 0:
-        psi = psi       
-    elif len(psi1) == 1:
-        psi = sp.expand(psi.xreplace({psi1[0]: PBS_Fun(psi1[0], p1, p2)}))
-    elif len(psi1) == 2:    
-        psi = sp.expand(psi.xreplace({psi1[0]: PBS_Fun(psi1[0], p1, p2), psi1[1]: PBS_Fun(psi1[1], p1, p2)}))
-    return psi
- 
-def Phase_Shifter(psi, p, phi):
-    psi = psi.replace(p[l], sp.exp(I*l*phi)*p[l])
-    return(psi)
-
-#define post selection
-def post_select (psi, dimm, ns = []):
-    expr = list(psi.free_symbols) 
-    base = []
-    for ii in expr:
-        if type(ii) == sp.tensor.indexed.Indexed:
-             base.append(ii.base)
-    path = list(set(base))
-    path = [x for x in path if x not in ns]
-    dim = [i for i in (range(len(path)))]
-    dim = encoded_label(dim, dimm)
-    phi = list(zip(path, dim))
-    PHI = [phi[i][0][phi[i][1]] for i in range(len(phi))]
-    expr1 = reduce(lambda x, y: x*y, PHI)
-    dictadd = sp.collect(psi, [expr1], evaluate=False)
-    term = list(dictadd.keys())
-    value = list(dictadd.values())
-    for tt in range(len(term)):
-        if term[tt] == 1:
-            value[tt] = 0
-    select = list(zip(term,value))
-    selection = [select[i][0]*select[i][1] for i in range(len(select))]
-    final_state = sp.expand(sum(selection))
-    return(final_state)
-
-# Graph to Entanglement by path identity
-
-"""Graph = { (0, 1, 0, 0): 1,
-             (0, 1, 1, 1): 1,
-             (1, 2, 1, 1): 1,
-             (2, 3, 0, 0): 1,
-             (0, 3, 1, 0): 1}"""
-           
-def Graph_to_EbPI(Graph):
-    global Paths
-    global dim
+#  Converts a graph representation to Entanglement by path identity     
+def GraphtoEbPI(Graph, Paths=Paths):
+   
     dictt = dict()
-    GraphEdges = [grouper(2,i)[0] for i in list(Graph.keys())]
-    GraphEdgesAlphabet = [encoded_label(path, get_num_label(Paths))for path in GraphEdges]
-    Dimension  = [grouper(2,i)[1] for i in list(Graph.keys())]
-    dd = len(np.unique(list(itertools.chain(*Dimension))))
-    Numphoton =  len(np.unique(list(itertools.chain(*GraphEdgesAlphabet))))
+
+    # Extract graph edges and dimensions
+    GraphEdges = [Grouper(2, i)[0] for i in list(Graph.keys())]
+    GraphEdgesAlphabet = [EncodedLabel(path, GetNumLabel(Paths)) for path in GraphEdges]
+    Dimension = [Grouper(2, i)[1] for i in list(Graph.keys())]
+    #Dim = len(np.unique(list(itertools.chain(*Dimension))))
+    NumMode = len(np.unique(list(itertools.chain(*GraphEdgesAlphabet))))
+
+   # Create the setup list
     SetupList = []
     for pp in range(len(Graph)):
-        SetupList.append("SPDC(XXX,"+GraphEdgesAlphabet[pp][0] +","+GraphEdgesAlphabet[pp][1]+","+str(Dimension[pp][0])+","+str(Dimension[pp][1])+")")
-    setup = SetupToStr(SetupList)
+        SetupList.append(
+            f"SPDC(psi, {GraphEdgesAlphabet[pp][0]}, {GraphEdgesAlphabet[pp][1]}, "
+            f"{Dimension[pp][0]}, {Dimension[pp][1]})"
+        )
+
     dictt['Experiment'] = SetupList
     dictt['SetupLength'] = len(SetupList)
-    dictt['OutputState'] = post_select(sp.expand((eval(setup.replace('XXX', str(0))))**int(Numphoton/2)), dim)
-    return dictt
-    
-#Graph to path-encoding (for on-chip) 
-def Graph_to_PathEn(graph):
-    global Paths
-    dictt = {}
-    GraphEdges = [grouper(2,i)[0] for i in list(Graph.keys())]
-    GraphEdgesAlphabet = [encoded_label(path,get_num_label(Paths))for path in GraphEdges]
-    Dimension  = [grouper(2,i)[1] for i in list(Graph.keys())]
-    SetupList = []
-    for pp in range(len(Graph)):
-        SetupList.append("SPDC(XXX,"+GraphEdgesAlphabet[pp][0]+str(pp)+","+GraphEdgesAlphabet[pp][1] + str(pp) +","+str(Dimension[pp][0])+","+str(Dimension[pp][1])+")")
-    AllPath = []
-    AllDim = []
-    for pp in range(len(Graph)):
-        AllPath.append(str(GraphEdgesAlphabet[pp][0])+str(pp))
-        AllPath.append(str(GraphEdgesAlphabet[pp][1])+str(pp))
-        AllDim.append(str(Dimension[pp][0]))
-        AllDim.append(str(Dimension[pp][1]))
-    PossiblePath = (list(itertools.combinations(AllPath,2)))
-    PossibleDim = (list(itertools.combinations(AllDim ,2)))    
-    combine= list(zip(PossiblePath,PossibleDim))
-    combination = [combine[i][0] + combine[i][1] for i in range(len(combine))]
-    for pd in range(len(combination)):
-        if combination[pd][0][0] == combination[pd][1][0] and combination[pd][2] == combination[pd][3]:
-            SetupList.append("BS(XXX," +combination[pd][0]+", "+combination[pd][1]+")")
-            SetupList.append("Absorber(XXX,"+combination[pd][1]+")") 
+
+    # Generate the output state using post-selection
     setup = SetupToStr(SetupList)
+    state = sp.expand(eval(setup.replace('psi', str(0))) ** int(NumMode / 2))
+    dictt['OutputState'] = PostSelaction(state, Sort(state))
+
+    return dictt
+
+
+# Converts a graph representation to a path-encoded setup for an on-chip quantum system.
+def GraphtoPathEn(Graph, Paths=Paths):
+   
+    dictt = {}
+
+    # Extract graph edges and dimensions
+    GraphEdges = [Grouper(2, i)[0] for i in list(Graph.keys())]
+    GraphEdgesAlphabet = [EncodedLabel(path, GetNumLabel(Paths)) for path in GraphEdges]
+    Dimension = [Grouper(2, i)[1] for i in list(Graph.keys())]
+
+    #Add SPDC to the setup list
+    SetupList = [
+        f"SPDC(psi, {GraphEdgesAlphabet[pp][0]}{pp}, {GraphEdgesAlphabet[pp][1]}{pp}, "
+        f"{Dimension[pp][0]}, {Dimension[pp][1]})"
+        for pp in range(len(Graph))
+    ]
+
+    # Gather all paths and dimensions
+    AllPath = [f"{GraphEdgesAlphabet[pp][j]}{pp}" for pp in range(len(Graph)) for j in [0, 1]]
+    AllDim = [str(Dimension[pp][j]) for pp in range(len(Graph)) for j in [0, 1]]
+
+    # Generate possible combinations of paths and dimensions
+    PossiblePath = list(itertools.combinations(AllPath, 2))
+    PossibleDim = list(itertools.combinations(AllDim, 2))
+    combine = list(zip(PossiblePath, PossibleDim))
+
+    # Add the beam splitter and absorber to the setup list
+    for pd in combine:
+        path_combination = pd[0]
+        dim_combination = pd[1]
+        if path_combination[0][0] == path_combination[1][0] and dim_combination[0] == dim_combination[1]:
+            SetupList.append(f"BeamSplitter(psi, {path_combination[0]}, {path_combination[1]})")
+            SetupList.append(f"Absorber(psi, {path_combination[1]})")
+
+    # Generate the output setup string
+    setup = SetupToStr(SetupList)
+
+    # Populate the dictionary with results
     dictt['Experiment'] = SetupList
     dictt['SetupLength'] = len(SetupList)
-    dictt['OutputState'] = sp.expand(eval(setup.replace('XXX', str(0))))
+    dictt['OutputState'] = sp.expand(eval(setup.replace('psi', str(0))))
+
     return dictt
-    
-#Graph to polarisation-encoding (for bulk optics)
-def Graph_to_PolEN(expr):
+
+# Converts a graph representation to a polarisation-encoding for a bulk optics 
+def GraphtoPolEn(expr):
+    """
+    Converts a quantum experiment setup (a path-encoded setup) to polarization encoding for bulk optics.
+
+    The GraphtoPolEN  is correct for generating a polarization encoding setup,
+    provided that the degrees of freedom (DOF) you're working with are indeed
+    polarization (degrees: [0, 1]).
+
+    Parameters:
+    expr : dict
+        A dictionary containing the initial setup ('Experiment') and quantum state ('OutputState').
+
+    Returns:
+    dict
+        A dictionary containing the updated experiment setup, setup length, and the new output quantum state.
+    """
     dictt = {}
+
     SetupList = expr['Experiment']
     psi = expr['OutputState']
-    ss = list(psi.free_symbols)
+
+    # Extract paths and dimensions from free symbols
+    symbols = list(psi.free_symbols)
     path = []
     dimension = []
-    for ii in ss:
-        if type(ii) == sp.tensor.indexed.Indexed:
-            path.append(str(ii.base))
-            dimension.append(str(ii.indices[0]))
-    PossiblePath = (list(itertools.combinations(path,2)))
-    PossibleDim = (list(itertools.combinations(dimension ,2)))  
-    combine= list(zip(PossiblePath,PossibleDim))
-    combination = [combine[i][0]+combine[i][1] for i in range(len(combine))]
+    for symbol in symbols:
+        if isinstance(symbol, sp.tensor.indexed.Indexed):
+            path.append(str(symbol.base))
+            dimension.append(str(symbol.indices[0]))
+
+    # Generate possible combinations of paths and dimensions
+    PossiblePath = list(itertools.combinations(path, 2))
+    PossibleDim = list(itertools.combinations(dimension, 2))
+    combine = list(zip(PossiblePath, PossibleDim))
+    combination = [combine[i][0] + combine[i][1] for i in range(len(combine))]
+
+    # Add polarising beam splitter to the setup based on conditions
     for pd in range(len(combination)):
-        if combination[pd][0][0]== combination[pd][1][0] and combination[pd][2]!=combination[pd][3]:
-            SetupList.append("PBS(XXX,"+combination[pd][0]+","+combination[pd][1]+")")
+        if combination[pd][0][0] == combination[pd][1][0] and combination[pd][2] != combination[pd][3]:
+            SetupList.append(f"PolarisingBeamSplitter(psi, {combination[pd][0]}, {combination[pd][1]})")
+
+    # Generate the setup string and calculate the new output state
     setup = SetupToStr(SetupList)
     dictt['Experiment'] = SetupList
     dictt['SetupLength'] = len(SetupList)
-    dictt['OutputState'] = sp.expand(eval(setup.replace('XXX', str(0))))
-    return dictt   
+    dictt['OutputState'] = sp.expand(eval(setup.replace('psi', str(0))))
+
+    return dictt
+
+Graph = {
+    (0, 1, 0, 0): 1,
+    (0, 1, 1, 1): 1,
+    (1, 2, 1, 1): 1,
+    (2, 3, 0, 0): 1,
+    (0, 3, 1, 0): 1
+}
