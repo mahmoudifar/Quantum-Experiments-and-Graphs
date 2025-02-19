@@ -12,7 +12,6 @@ Paths = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'p']
 
 ALLPaths = [f'{prefix}{i}' for i in range(0, num_mode + 1) for prefix in Paths] + Paths
           
-
 for op in ALLPaths: # op: optical path
     globals()[op] = sp.IndexedBase(op)
 
@@ -22,7 +21,7 @@ n, m, l, l1, l2, l3, l4, l5, l6, l7, l8, l9, l10 = map(sp.Wild, ['n', 'm', 'l', 
 
 theta, alpha, phi = sp.symbols('theta alpha phi', integer=True)
 
-Labels =  [l1, l2, l3, l4, l5, l6, l7, l8, l9, l10]
+Labels = [l1, l2, l3, l4, l5, l6, l7, l8, l9, l10]
 
 def SetupToStr(setup):
     # A string created by replacing 'psi' with elements from the setup list in reverse order.
@@ -68,7 +67,7 @@ def Sort(psi, labels=Labels):
     
     return sorted_result
 
-def PostSelaction(psi, selected_term):
+def PostSelection(psi, selected_term):
 
     collected_terms = sp.collect(psi, [selected_term], evaluate=False)
 
@@ -168,7 +167,7 @@ def GraphtoEbPI(Graph, Paths=Paths):
     # Generate the output state using post-selection
     setup = SetupToStr(SetupList)
     state = sp.expand(eval(setup.replace('psi', str(0))) ** int(NumMode / 2))
-    dictt['OutputState'] = PostSelaction(state, Sort(state))
+    dictt['OutputState'] = PostSelection(state, Sort(state))
 
     return dictt
 
@@ -217,7 +216,7 @@ def GraphtoPathEn(Graph, Paths=Paths):
 
     return dictt
 
-# Converts a graph representation to a polarisation-encoding for a bulk optics 
+# Converts a graph representation to a polarisation-encoding for bulk optics 
 def GraphtoPolEn(expr):
     """
     Converts a quantum experiment setup (a path-encoded setup) to polarization encoding for bulk optics.
@@ -227,7 +226,7 @@ def GraphtoPolEn(expr):
     polarization (degrees: [0, 1]).
 
     Parameters:
-    expr : dict
+    expr: dict
         A dictionary containing the initial setup ('Experiment') and quantum state ('OutputState').
 
     Returns:
@@ -254,7 +253,7 @@ def GraphtoPolEn(expr):
     combine = list(zip(PossiblePath, PossibleDim))
     combination = [combine[i][0] + combine[i][1] for i in range(len(combine))]
 
-    # Add polarising beam splitter to the setup based on conditions
+    # Add polarising beam splitters to the setup based on conditions
     for pd in range(len(combination)):
         if combination[pd][0][0] == combination[pd][1][0] and combination[pd][2] != combination[pd][3]:
             SetupList.append(f"PolarisingBeamSplitter(psi, {combination[pd][0]}, {combination[pd][1]})")
